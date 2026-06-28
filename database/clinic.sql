@@ -208,3 +208,37 @@ CREATE TABLE IF NOT EXISTS `activity_logs` (
   KEY `idx_act_user` (`user_id`),
   KEY `idx_act_action` (`action`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================================
+-- Tabel P3K (dipakai P3k_model)
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS `p3k_kits` (
+  `id`          INT(11)      NOT NULL AUTO_INCREMENT,
+  `name`        VARCHAR(100) NOT NULL,
+  `description` VARCHAR(255) DEFAULT NULL,
+  `stock`       INT(11)      NOT NULL DEFAULT 0,
+  `min_stock`   INT(11)      NOT NULL DEFAULT 5,
+  `created_at`  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `p3k_wd` (
+  `id`         INT(11)      NOT NULL AUTO_INCREMENT,
+  `user_id`    INT(11)      NOT NULL,
+  `kit_id`     INT(11)      NOT NULL,
+  `quantity`   INT(11)      NOT NULL DEFAULT 1,
+  `purpose`    VARCHAR(255) DEFAULT NULL,
+  `notes`      TEXT         DEFAULT NULL,
+  `created_at` TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_wd_user` (`user_id`),
+  KEY `idx_wd_kit`  (`kit_id`),
+  CONSTRAINT `fk_wd_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)    ON DELETE CASCADE,
+  CONSTRAINT `fk_wd_kit`  FOREIGN KEY (`kit_id`)  REFERENCES `p3k_kits` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `p3k_kits` (`name`, `description`, `stock`, `min_stock`) VALUES
+('P3K Reguler',      'Perban elastis, kasa steril, betadine, plester, gunting medis, sarung tangan steril, antiseptik, termometer', 20, 5),
+('P3K Boren/Newbie', 'Perban kasa steril, plester luka, antiseptik cair, kapas steril', 20, 5);

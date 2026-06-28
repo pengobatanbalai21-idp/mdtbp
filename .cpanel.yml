@@ -6,23 +6,22 @@ deployment:
     - export DEPLOYPATH=$HOME/public_html
     - /bin/mkdir -p $DEPLOYPATH
 
-    # Salin file repo -> web root. TANPA --delete biar file di server yang
-    # tidak ada di git (config production, upload, log) tidak ikut terhapus.
-    # File yang TIDAK boleh ketimpa / tidak perlu di server dikecualikan di bawah.
+    # Server ini tidak punya rsync, jadi copy pakai tar (pipe create -> extract).
+    # tar extract menimpa file yang sama, TAPI tidak menghapus file server yang
+    # tidak ada di repo (config production, upload, log asli tetap aman).
+    # Yang tidak perlu / tidak boleh ke web root dikecualikan di bawah.
     - >
-      /usr/bin/rsync -a
-      --exclude='.git'
-      --exclude='.github'
-      --exclude='.gitignore'
-      --exclude='.editorconfig'
-      --exclude='.claude'
-      --exclude='.cpanel.yml'
-      --exclude='readme.rst'
-      --exclude='license.txt'
-      --exclude='composer.json'
-      --exclude='composer.lock'
-      --exclude='database/'
-      --exclude='application/logs/'
-      --exclude='application/cache/'
-      --exclude='application/config/production/'
-      ./ $DEPLOYPATH/
+      /usr/bin/tar -cf -
+      --exclude='./.git'
+      --exclude='./.github'
+      --exclude='./.gitignore'
+      --exclude='./.editorconfig'
+      --exclude='./.claude'
+      --exclude='./.cpanel.yml'
+      --exclude='./readme.rst'
+      --exclude='./license.txt'
+      --exclude='./composer.json'
+      --exclude='./composer.lock'
+      --exclude='./database'
+      --exclude='./application/config/production'
+      ./ | /usr/bin/tar -xf - -C $DEPLOYPATH

@@ -24,4 +24,7 @@ deployment:
       --exclude='./composer.lock'
       --exclude='./database'
       --exclude='./application/config/production'
-      ./ | /usr/bin/tar -xf - -C $DEPLOYPATH
+      ./ | /usr/bin/tar -xf - --no-overwrite-dir -C $DEPLOYPATH
+
+    # Pastikan permission web root tetap 0750 (tar bisa menimpa jadi 0700 -> LiteSpeed 404).
+    - /bin/chmod 750 $DEPLOYPATH

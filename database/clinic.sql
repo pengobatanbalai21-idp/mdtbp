@@ -170,3 +170,41 @@ INSERT INTO `package_items` (`package_id`, `medicine_id`, `quantity`) VALUES
 -- Package items: Paket Lengkap (id=2)
 INSERT INTO `package_items` (`package_id`, `medicine_id`, `quantity`) VALUES
 (2, 1, 1), (2, 2, 1), (2, 3, 1), (2, 4, 1), (2, 5, 1);
+
+-- =============================================================
+-- Tabel tambahan: dipakai kode (Leave_model, Activity_log_model)
+-- tapi belum ada di dump awal clinic.sql
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS `leave_requests` (
+  `id`          INT(11)      NOT NULL AUTO_INCREMENT,
+  `user_id`     INT(11)      NOT NULL,
+  `type`        VARCHAR(20)  NOT NULL DEFAULT 'izin',
+  `start_date`  DATE         NOT NULL,
+  `end_date`    DATE         NOT NULL,
+  `days`        INT(11)      NOT NULL DEFAULT 1,
+  `reason`      TEXT         DEFAULT NULL,
+  `status`      ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `review_note` TEXT         DEFAULT NULL,
+  `reviewed_by` INT(11)      DEFAULT NULL,
+  `reviewed_at` DATETIME     DEFAULT NULL,
+  `created_at`  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_leave_user` (`user_id`),
+  KEY `idx_leave_status` (`status`),
+  CONSTRAINT `fk_leave_user`     FOREIGN KEY (`user_id`)     REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_leave_reviewer` FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `activity_logs` (
+  `id`          INT(11)      NOT NULL AUTO_INCREMENT,
+  `user_id`     INT(11)      DEFAULT NULL,
+  `user_name`   VARCHAR(100) DEFAULT NULL,
+  `action`      VARCHAR(50)  NOT NULL,
+  `description` TEXT         DEFAULT NULL,
+  `ip_address`  VARCHAR(45)  DEFAULT NULL,
+  `created_at`  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_act_user` (`user_id`),
+  KEY `idx_act_action` (`action`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

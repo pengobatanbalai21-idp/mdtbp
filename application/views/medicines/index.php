@@ -65,6 +65,12 @@ $isAdmin = in_array($user['role'], ['admin','pimpinan']);
                                 data-id="<?= $med['id'] ?>" data-name="<?= htmlspecialchars($med['name']) ?>">
                             <i class="bi bi-plus-circle me-1"></i>Tambah Stok
                         </button>
+                        <button class="btn btn-sm btn-outline-danger w-100 mt-2 rounded-3"
+                                data-bs-toggle="modal" data-bs-target="#reduceStockModal"
+                                data-id="<?= $med['id'] ?>" data-name="<?= htmlspecialchars($med['name']) ?>"
+                                data-stock="<?= $med['stock'] ?>" <?= $med['stock'] <= 0 ? 'disabled' : '' ?>>
+                            <i class="bi bi-dash-circle me-1"></i>Kurangi Stok
+                        </button>
                         <?php else: ?>
                         <div class="mt-2">
                             <small class="text-muted">Min: <?= $med['min_stock'] ?></small>
@@ -147,11 +153,54 @@ $isAdmin = in_array($user['role'], ['admin','pimpinan']);
         </div>
     </div>
 </div>
+<!-- Modal Kurangi Stok -->
+<div class="modal fade" id="reduceStockModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4">
+            <form method="POST" action="<?= site_url('medicines/reduce_stock') ?>">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold text-danger">Kurangi Stok Obat</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="medicine_id" id="reduceMedicineId">
+                    <div class="mb-3">
+                        <label class="form-label">Nama Obat</label>
+                        <input type="text" id="reduceMedicineName" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Stok Saat Ini</label>
+                        <input type="text" id="reduceMedicineStock" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Jumlah Pengurangan</label>
+                        <input type="number" name="quantity" id="reduceQty" class="form-control" min="1" placeholder="Masukkan jumlah" required>
+                        <div class="form-text">Tidak boleh melebihi stok saat ini.</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger rounded-3">Kurangi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <script>
 document.getElementById('addStockModal').addEventListener('show.bs.modal', function(e) {
     var btn = e.relatedTarget;
     document.getElementById('stockMedicineId').value = btn.getAttribute('data-id');
     document.getElementById('stockMedicineName').value = btn.getAttribute('data-name');
+});
+document.getElementById('reduceStockModal').addEventListener('show.bs.modal', function(e) {
+    var btn   = e.relatedTarget;
+    var stock = btn.getAttribute('data-stock');
+    document.getElementById('reduceMedicineId').value    = btn.getAttribute('data-id');
+    document.getElementById('reduceMedicineName').value  = btn.getAttribute('data-name');
+    document.getElementById('reduceMedicineStock').value = stock + ' pcs';
+    var q = document.getElementById('reduceQty');
+    q.max = stock;
+    q.value = '';
 });
 </script>
 <?php endif; ?>

@@ -50,6 +50,33 @@ class Medicines extends MY_Controller
         redirect('medicines');
     }
 
+    /** Kurangi stok - admin/pimpinan only */
+    public function reduce_stock()
+    {
+        $this->requireRole(['admin', 'pimpinan']);
+
+        $id  = $this->input->post('medicine_id');
+        $qty = (int) $this->input->post('quantity');
+
+        if (!$id || $qty <= 0) {
+            $this->session->set_flashdata('error', 'Data tidak valid.');
+            redirect('medicines');
+            return;
+        }
+
+        $med = $this->Medicine_model->getMedicineById($id);
+        if (!$med) {
+            $this->session->set_flashdata('error', 'Obat tidak ditemukan.');
+        } elseif ($qty > $med['stock']) {
+            $this->session->set_flashdata('error', "Jumlah melebihi stok {$med['name']} (tersisa {$med['stock']}).");
+        } else {
+            $this->Medicine_model->updateStock($id, $qty, 'subtract');
+            $this->logActivity('kurang_stok_obat', "Kurangi stok medicine_id={$id} qty={$qty}");
+            $this->session->set_flashdata('success', "Stok {$med['name']} berhasil dikurangi sebanyak {$qty}.");
+        }
+        redirect('medicines');
+    }
+
     /** Halaman jual/WD obat — admin/pimpinan only */
     public function sell()
     {

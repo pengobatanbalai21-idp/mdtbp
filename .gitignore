@@ -1,6 +1,9 @@
 .DS_Store
 .claude/
 
+# Config production (kredensial DB asli) -> dibuat manual di server, JANGAN di-commit
+application/config/production/
+
 application/cache/*
 !application/cache/index.html
 

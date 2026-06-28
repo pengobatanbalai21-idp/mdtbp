@@ -1,3 +1,11 @@
+# --- Environment CodeIgniter (otomatis sesuai host) ---
+# Default semua host = production (server). localhost/IP lokal = development.
+# Dipakai index.php: define('ENVIRONMENT', $_SERVER['CI_ENV'] ...)
+SetEnvIf Host . CI_ENV=production
+SetEnvIf Host "(^|\.)localhost(:[0-9]+)?$" CI_ENV=development
+SetEnvIf Host "^127\.0\.0\.1" CI_ENV=development
+SetEnvIf Host "^192\.168\." CI_ENV=development
+
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

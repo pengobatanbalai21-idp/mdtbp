@@ -7,7 +7,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 | Sesuaikan dengan path instalasi Anda, misal: http://localhost/clinic-app/
 |--------------------------------------------------------------------------
 */
-$config['base_url'] = 'http://localhost/clinic-app/';
+$config['base_url'] = getenv('BASE_URL') ?: 'http://localhost/clinic-app/';
 $config['index_page'] = '';
 
 $config['uri_protocol']     = 'REQUEST_URI';

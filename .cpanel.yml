@@ -22,6 +22,10 @@ deployment:
       --exclude='./license.txt'
       --exclude='./composer.json'
       --exclude='./composer.lock'
+      --exclude='./Dockerfile'
+      --exclude='./docker-compose.yml'
+      --exclude='./docker'
+      --exclude='./.dockerignore'
       --exclude='./database'
       --exclude='./application/config/production'
       ./ | /usr/bin/tar -xf - --no-overwrite-dir -C $DEPLOYPATH

@@ -13,10 +13,12 @@ $query_builder = TRUE;
 
 $db['default'] = array(
     'dsn'      => '',
-    'hostname' => 'localhost',
-    'username' => 'root',       // ganti sesuai user MySQL Anda
-    'password' => '',           // ganti sesuai password MySQL Anda
-    'database' => 'clinic_db',
+    // Ambil dari environment (Docker) bila ada; fallback ke default lokal (XAMPP).
+    // Produksi tidak terpengaruh (pakai config/production/database.php).
+    'hostname' => getenv('DB_HOST') ?: 'localhost',
+    'username' => getenv('DB_USER') ?: 'root',       // ganti sesuai user MySQL Anda
+    'password' => getenv('DB_PASS') !== false ? getenv('DB_PASS') : '', // ganti sesuai password
+    'database' => getenv('DB_NAME') ?: 'clinic_db',
     'dbdriver' => 'mysqli',
     'dbprefix' => '',
     'pconnect' => FALSE,

@@ -1,0 +1,10 @@
+.git
+.github
+.claude
+.DS_Store
+application/logs/*.php
+application/cache/*
+!application/cache/index.html
+vendor
+node_modules
+*.md

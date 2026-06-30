@@ -1,0 +1,58 @@
+services:
+  # ── Aplikasi (PHP 7.4 + Apache) ──────────────────────────
+  app:
+    build: .
+    container_name: mdtbp_app
+    ports:
+      - "8080:80"               # akses app di http://localhost:8080
+    volumes:
+      - ./:/var/www/html        # live-edit: perubahan kode langsung kebaca
+    environment:
+      CI_ENV: development
+      DB_HOST: db
+      DB_USER: clinic
+      DB_PASS: clinic
+      DB_NAME: clinic_db
+      BASE_URL: "http://localhost:8080/"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Database (MariaDB, sama seperti server) ──────────────
+  db:
+    image: mariadb:10.6
+    container_name: mdtbp_db
+    environment:
+      MARIADB_DATABASE: clinic_db
+      MARIADB_USER: clinic
+      MARIADB_PASSWORD: clinic
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - dbdata:/var/lib/mysql
+      # Auto-import skema + data saat pertama kali container dibuat
+      - ./database/clinic.sql:/docker-entrypoint-initdb.d/01-clinic.sql:ro
+    ports:
+      - "3307:3306"             # akses DB dari host di port 3307 (hindari bentrok 3306 lokal)
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # ── phpMyAdmin (opsional, untuk kelola DB) ───────────────
+  phpmyadmin:
+    image: phpmyadmin:5
+    container_name: mdtbp_pma
+    ports:
+      - "8081:80"               # phpMyAdmin di http://localhost:8081
+    environment:
+      PMA_HOST: db
+      UPLOAD_LIMIT: 64M
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  dbdata:

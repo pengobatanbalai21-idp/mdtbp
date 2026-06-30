@@ -142,7 +142,16 @@ foreach ($history as $h) {
                             <span class="badge bg-secondary rounded-pill"><?= $row['quantity'] ?> unit</span>
                         </td>
                         <td class="text-truncate" style="max-width:180px">
-                            <?= htmlspecialchars($row['purpose'] ?? '-') ?>
+                            <?php $purpose = $row['purpose'] ?? '-'; ?>
+                            <?php if (filter_var($purpose, FILTER_VALIDATE_URL)): ?>
+                                <a href="<?= htmlspecialchars($purpose) ?>" target="_blank" rel="noopener noreferrer"
+                                   class="text-primary text-decoration-none small"
+                                   title="<?= htmlspecialchars($purpose) ?>">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Buka Link
+                                </a>
+                            <?php else: ?>
+                                <?= htmlspecialchars($purpose) ?>
+                            <?php endif; ?>
                         </td>
                         <td class="text-muted small text-truncate" style="max-width:150px">
                             <?= htmlspecialchars($row['notes'] ?? '-') ?>

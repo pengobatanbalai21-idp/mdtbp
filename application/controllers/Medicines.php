@@ -122,6 +122,20 @@ class Medicines extends MY_Controller
         $this->load->view('templates/footer', $data);
     }
 
+    /** Verifikasi/checklist 1 transaksi penjualan — admin/pimpinan only */
+    public function check_sale($id)
+    {
+        $this->requireRole(['admin', 'pimpinan']);
+        $res = $this->Medicine_model->toggleSaleCheck($id, $this->user['id']);
+        if ($res === null) {
+            $this->session->set_flashdata('error', 'Transaksi tidak ditemukan.');
+        } else {
+            $this->logActivity('verifikasi_penjualan', "Penjualan id={$id} " . ($res ? 'dicentang' : 'dilepas'));
+            $this->session->set_flashdata('success', $res ? 'Transaksi terverifikasi.' : 'Verifikasi dilepas.');
+        }
+        $this->backRedirect('medicines/history');
+    }
+
     /** Riwayat penjualan — admin/pimpinan only */
     public function history()
     {

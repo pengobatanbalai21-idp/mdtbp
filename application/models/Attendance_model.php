@@ -11,56 +11,126 @@ class Attendance_model extends CI_Model
                         ->row_array();
     }
 
+    /** Sesi yang masih terbuka hari ini (sudah clock in, belum clock out) */
+    public function getOpenSession($userId)
+    {
+        return $this->db->where('user_id', $userId)
+                        ->where('date', date('Y-m-d'))
+                        ->where('clock_in IS NOT NULL', null, false)
+                        ->where('clock_out IS NULL', null, false)
+                        ->order_by('clock_in', 'DESC')
+                        ->limit(1)
+                        ->get('attendance')->row_array();
+    }
+
+    /** Semua sesi absensi hari ini (bisa lebih dari satu) */
+    public function getTodaySessions($userId)
+    {
+        return $this->db->where('user_id', $userId)
+                        ->where('date', date('Y-m-d'))
+                        ->order_by('clock_in', 'ASC')
+                        ->get('attendance')->result_array();
+    }
+
+    /** Total jam kerja terkumpul hari ini (semua sesi) */
+    public function getTodayTotalHours($userId)
+    {
+        $row = $this->db->select_sum('work_hours')
+                        ->where('user_id', $userId)
+                        ->where('date', date('Y-m-d'))
+                        ->get('attendance')->row_array();
+        return (float)($row['work_hours'] ?? 0);
+    }
+
     public function clockIn($userId)
     {
-        $today    = date('Y-m-d');
-        $existing = $this->getTodayAttendance($userId);
-
-        if ($existing) {
-            // Update clock_in, reset clock_out dan work_hours
-            $this->db->where('id', $existing['id'])->update('attendance', [
-                'clock_in'   => date('Y-m-d H:i:s'),
-                'clock_out'  => null,
-                'work_hours' => 0,
-                'status'     => 'hadir',
-            ]);
-        } else {
-            $this->db->insert('attendance', [
-                'user_id'    => $userId,
-                'date'       => $today,
-                'clock_in'   => date('Y-m-d H:i:s'),
-                'status'     => 'hadir',
-                'work_hours' => 0,
-            ]);
+        // Boleh clock in lebih dari sekali per hari — tiap clock in = sesi baru.
+        // Tapi harus clock out dulu sesi yang masih terbuka.
+        if ($this->getOpenSession($userId)) {
+            return ['success' => false, 'message' => 'Masih ada sesi kerja yang terbuka. Silakan Clock Out dulu.'];
         }
+
+        $this->db->insert('attendance', [
+            'user_id'    => $userId,
+            'date'       => date('Y-m-d'),
+            'clock_in'   => date('Y-m-d H:i:s'),
+            'status'     => 'hadir',
+            'work_hours' => 0,
+        ]);
         return ['success' => true, 'message' => 'Clock in berhasil pukul ' . date('H:i:s')];
     }
 
     public function clockOut($userId)
     {
-        $existing = $this->getTodayAttendance($userId);
+        $open = $this->getOpenSession($userId);
 
-        if (!$existing || !$existing['clock_in']) {
-            // Belum clock in — buat record dengan clock_in = clock_out = sekarang
-            $now = date('Y-m-d H:i:s');
-            $this->db->insert('attendance', [
-                'user_id'    => $userId,
-                'date'       => date('Y-m-d'),
-                'clock_in'   => $now,
-                'clock_out'  => $now,
-                'status'     => 'hadir',
-                'work_hours' => 0,
-            ]);
-        } else {
-            $clockIn   = strtotime($existing['clock_in']);
-            $clockOut  = time();
-            $workHours = round(($clockOut - $clockIn) / 3600, 2);
-            $this->db->where('id', $existing['id'])->update('attendance', [
-                'clock_out'  => date('Y-m-d H:i:s'),
-                'work_hours' => $workHours,
-            ]);
+        if (!$open) {
+            return ['success' => false, 'message' => 'Tidak ada sesi kerja aktif. Silakan Clock In dulu.'];
         }
+
+        $workHours = round((time() - strtotime($open['clock_in'])) / 3600, 2);
+        $this->db->where('id', $open['id'])->update('attendance', [
+            'clock_out'  => date('Y-m-d H:i:s'),
+            'work_hours' => $workHours,
+        ]);
         return ['success' => true, 'message' => 'Clock out berhasil pukul ' . date('H:i:s')];
+    }
+
+    // ── Edit/hapus record (admin/pimpinan) ───────────────────
+    public function getRecordById($id)
+    {
+        return $this->db->where('id', $id)->get('attendance')->row_array();
+    }
+
+    public function updateRecord($id, $clockIn, $clockOut, $status)
+    {
+        $data = [
+            'clock_in'  => $clockIn  ?: null,
+            'clock_out' => $clockOut ?: null,
+            'status'    => $status,
+        ];
+        $data['work_hours'] = ($clockIn && $clockOut)
+            ? max(0, round((strtotime($clockOut) - strtotime($clockIn)) / 3600, 2))
+            : 0;
+        return $this->db->where('id', $id)->update('attendance', $data);
+    }
+
+    public function deleteRecord($id)
+    {
+        return $this->db->where('id', $id)->delete('attendance');
+    }
+
+    // ── Checklist verifikasi rekap mingguan ──────────────────
+    public function getRecapCheckMap()
+    {
+        $rows = $this->db->select('rc.user_id, rc.tahun, rc.minggu, rc.checked_at, c.name AS checker_name')
+                         ->from('recap_checks rc')
+                         ->join('users c', 'c.id = rc.checked_by', 'left')
+                         ->get()->result_array();
+        $map = [];
+        foreach ($rows as $r) {
+            $map[$r['user_id'] . '_' . $r['tahun'] . '_' . $r['minggu']] = $r;
+        }
+        return $map;
+    }
+
+    /** Toggle verifikasi satu baris rekap. Return TRUE jika jadi tercentang, FALSE jika dilepas. */
+    public function toggleRecapCheck($userId, $tahun, $minggu, $checkerId)
+    {
+        $existing = $this->db->where(['user_id' => $userId, 'tahun' => $tahun, 'minggu' => $minggu])
+                             ->get('recap_checks')->row_array();
+        if ($existing) {
+            $this->db->where('id', $existing['id'])->delete('recap_checks');
+            return false;
+        }
+        $this->db->insert('recap_checks', [
+            'user_id'    => $userId,
+            'tahun'      => $tahun,
+            'minggu'     => $minggu,
+            'checked_by' => $checkerId,
+            'checked_at' => date('Y-m-d H:i:s'),
+        ]);
+        return true;
     }
 
     public function getHistory($userId = null, $startDate = null, $endDate = null, $limit = 30, $offset = 0)
@@ -111,7 +181,8 @@ class Attendance_model extends CI_Model
 
         $rows = $this->db->order_by('u.name', 'ASC')->order_by('a.date', 'ASC')->get()->result_array();
 
-        $grouped = [];
+        $grouped   = [];
+        $datesSeen = [];
         foreach ($rows as $row) {
             $dt      = new DateTime($row['date']);
             $weekNum = (int)$dt->format('W');
@@ -135,9 +206,15 @@ class Attendance_model extends CI_Model
                     'hari_hadir' => 0,
                 ];
             }
-            $grouped[$key]['total_jam']   += (float)$row['work_hours'];
-            $grouped[$key]['hari_hadir']++;
+            $grouped[$key]['total_jam']      += (float)$row['work_hours'];
+            $datesSeen[$key][$row['date']]    = true; // hari unik (multi-sesi tidak double-count)
         }
+
+        // hari_hadir = jumlah tanggal unik per (user x minggu)
+        foreach ($grouped as $k => &$g) {
+            $g['hari_hadir'] = count($datesSeen[$k]);
+        }
+        unset($g);
 
         $result = array_values($grouped);
         usort($result, function($a, $b) {
@@ -153,7 +230,7 @@ class Attendance_model extends CI_Model
     {
         $m = $month ?: date('m');
         $y = $year  ?: date('Y');
-        return $this->db->select('status, COUNT(*) as total, SUM(work_hours) as jam_kerja')
+        return $this->db->select('status, COUNT(DISTINCT date) as total, SUM(work_hours) as jam_kerja')
                         ->where('user_id', $userId)
                         ->where('MONTH(date)', $m)
                         ->where('YEAR(date)', $y)

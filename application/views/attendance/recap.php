@@ -32,6 +32,7 @@
                     <?php endforeach; ?>
                 </select>
             </div>
+            <?php if ($is_admin): ?>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Staf</label>
                 <select name="user_id" class="form-select">
@@ -43,6 +44,7 @@
                     <?php endforeach; ?>
                 </select>
             </div>
+            <?php endif; ?>
             <div class="col-md-3">
                 <button class="btn btn-primary w-100 rounded-3"><i class="bi bi-search me-1"></i>Tampilkan</button>
             </div>
@@ -97,6 +99,7 @@ $prevUid = null;
                         <th class="text-center">Status</th>
                         <th class="text-center">Kurang</th>
                         <th class="text-end pe-4">Denda</th>
+                        <th class="text-center">Verifikasi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -159,6 +162,31 @@ $prevUid = null;
                     <td class="text-end pe-4 fw-bold <?= $row['denda'] > 0 ? 'text-danger' : 'text-muted' ?>">
                         <?= $row['denda'] > 0 ? 'Rp ' . number_format($row['denda'], 0, ',', '.') : '-' ?>
                     </td>
+                    <td class="text-center">
+                        <?php if ($row['checked']): ?>
+                            <span class="badge bg-success-subtle text-success rounded-pill px-2"
+                                  title="Diverifikasi <?= $row['checked_at'] ? date('d M Y H:i', strtotime($row['checked_at'])) : '' ?>">
+                                <i class="bi bi-check2-circle me-1"></i><?= htmlspecialchars($row['checker_name'] ?? 'Terverifikasi') ?>
+                            </span>
+                            <?php if ($is_admin): ?>
+                            <form method="POST" action="<?= site_url('attendance/check_recap') ?>" class="d-inline">
+                                <input type="hidden" name="user_id" value="<?= $row['user_id'] ?>">
+                                <input type="hidden" name="tahun"   value="<?= $row['tahun'] ?>">
+                                <input type="hidden" name="minggu"  value="<?= $row['minggu'] ?>">
+                                <button class="btn btn-sm btn-link text-danger p-0 ms-1 align-baseline" title="Lepas verifikasi"><i class="bi bi-x-circle"></i></button>
+                            </form>
+                            <?php endif; ?>
+                        <?php elseif ($is_admin): ?>
+                            <form method="POST" action="<?= site_url('attendance/check_recap') ?>" class="d-inline">
+                                <input type="hidden" name="user_id" value="<?= $row['user_id'] ?>">
+                                <input type="hidden" name="tahun"   value="<?= $row['tahun'] ?>">
+                                <input type="hidden" name="minggu"  value="<?= $row['minggu'] ?>">
+                                <button class="btn btn-sm btn-outline-success rounded-3" title="Verifikasi rekap ini"><i class="bi bi-check2"></i> Cek</button>
+                            </form>
+                        <?php else: ?>
+                            <span class="text-muted small">Belum</span>
+                        <?php endif; ?>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -167,6 +195,7 @@ $prevUid = null;
                     <tr>
                         <td colspan="6" class="text-end fw-bold ps-4">Total Keseluruhan Denda:</td>
                         <td class="text-end pe-4 fw-bold text-danger fs-6">Rp <?= number_format($total_denda, 0, ',', '.') ?></td>
+                        <td></td>
                     </tr>
                 </tfoot>
                 <?php endif; ?>

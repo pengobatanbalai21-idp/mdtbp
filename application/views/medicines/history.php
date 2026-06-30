@@ -85,6 +85,7 @@ $totalPendapatan = array_sum(array_column($sales, 'total_price'));
                         <th>Pasien</th>
                         <th>Qty</th>
                         <th class="text-end">Total</th>
+                        <th class="text-center">Verifikasi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -111,6 +112,25 @@ $totalPendapatan = array_sum(array_column($sales, 'total_price'));
                         <td><?= htmlspecialchars($s['patient_name'] ?: '-') ?></td>
                         <td><?= $s['quantity'] ?>x</td>
                         <td class="text-end fw-bold text-success">Rp <?= number_format($s['total_price'], 0, ',', '.') ?></td>
+                        <td class="text-center text-nowrap">
+                            <?php if (!empty($s['checked_by'])): ?>
+                                <span class="badge bg-success-subtle text-success rounded-pill px-2"
+                                      title="Diverifikasi <?= $s['checked_at'] ? date('d M Y H:i', strtotime($s['checked_at'])) : '' ?>">
+                                    <i class="bi bi-check2-circle me-1"></i><?= htmlspecialchars($s['checker_name'] ?? 'OK') ?>
+                                </span>
+                                <?php if ($isAdmin): ?>
+                                <form method="POST" action="<?= site_url('medicines/check_sale/' . $s['id']) ?>" class="d-inline">
+                                    <button class="btn btn-sm btn-link text-danger p-0 ms-1 align-baseline" title="Lepas verifikasi"><i class="bi bi-x-circle"></i></button>
+                                </form>
+                                <?php endif; ?>
+                            <?php elseif ($isAdmin): ?>
+                                <form method="POST" action="<?= site_url('medicines/check_sale/' . $s['id']) ?>" class="d-inline">
+                                    <button class="btn btn-sm btn-outline-success rounded-3" title="Verifikasi"><i class="bi bi-check2"></i></button>
+                                </form>
+                            <?php else: ?>
+                                <span class="text-muted small">—</span>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -118,6 +138,7 @@ $totalPendapatan = array_sum(array_column($sales, 'total_price'));
                     <tr>
                         <td colspan="<?= $isAdmin ? 5 : 4 ?>" class="text-end fw-bold">Total:</td>
                         <td class="fw-bold text-success" colspan="2">Rp <?= number_format($totalPendapatan, 0, ',', '.') ?></td>
+                        <td></td>
                     </tr>
                 </tfoot>
             </table>

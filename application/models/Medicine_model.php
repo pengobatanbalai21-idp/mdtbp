@@ -176,9 +176,10 @@ class Medicine_model extends CI_Model
 
     public function getSalesHistory($limit = 30, $offset = 0, $userId = null)
     {
-        $this->db->select('s.*, u.name as petugas, u.jabatan')
+        $this->db->select('s.*, u.name as petugas, u.jabatan, c.name as checker_name')
                  ->from('sales s')
-                 ->join('users u', 'u.id = s.user_id');
+                 ->join('users u', 'u.id = s.user_id')
+                 ->join('users c', 'c.id = s.checked_by', 'left');
 
         if ($userId) {
             $this->db->where('s.user_id', $userId);
@@ -204,5 +205,22 @@ class Medicine_model extends CI_Model
                         ->where('DATE(created_at)', date('Y-m-d'))
                         ->get('sales')->row_array();
         return $row['total_price'] ?? 0;
+    }
+
+    /** Toggle verifikasi 1 transaksi penjualan. TRUE=tercentang, FALSE=dilepas, NULL=tidak ada. */
+    public function toggleSaleCheck($id, $checkerId)
+    {
+        $row = $this->db->where('id', $id)->get('sales')->row_array();
+        if (!$row) return null;
+
+        if ($row['checked_by']) {
+            $this->db->where('id', $id)->update('sales', ['checked_by' => null, 'checked_at' => null]);
+            return false;
+        }
+        $this->db->where('id', $id)->update('sales', [
+            'checked_by' => $checkerId,
+            'checked_at' => date('Y-m-d H:i:s'),
+        ]);
+        return true;
     }
 }

@@ -45,7 +45,7 @@ CREATE TABLE `attendance` (
   `notes`      TEXT          DEFAULT NULL,
   `created_at` TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_attendance` (`user_id`,`date`),
+  KEY `idx_att_user_date` (`user_id`,`date`),
   CONSTRAINT `fk_att_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -103,6 +103,8 @@ CREATE TABLE `sales` (
   `quantity`     INT(11)       DEFAULT 1,
   `total_price`  DECIMAL(10,2) NOT NULL,
   `notes`        TEXT          DEFAULT NULL,
+  `checked_by`   INT(11)       DEFAULT NULL,
+  `checked_at`   DATETIME      DEFAULT NULL,
   `created_at`   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   CONSTRAINT `fk_sales_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
@@ -231,6 +233,8 @@ CREATE TABLE IF NOT EXISTS `p3k_wd` (
   `quantity`   INT(11)      NOT NULL DEFAULT 1,
   `purpose`    VARCHAR(255) DEFAULT NULL,
   `notes`      TEXT         DEFAULT NULL,
+  `checked_by` INT(11)      DEFAULT NULL,
+  `checked_at` DATETIME     DEFAULT NULL,
   `created_at` TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_wd_user` (`user_id`),
@@ -242,3 +246,20 @@ CREATE TABLE IF NOT EXISTS `p3k_wd` (
 INSERT INTO `p3k_kits` (`name`, `description`, `stock`, `min_stock`) VALUES
 ('P3K Reguler',      'Perban elastis, kasa steril, betadine, plester, gunting medis, sarung tangan steril, antiseptik, termometer', 20, 5),
 ('P3K Boren/Newbie', 'Perban kasa steril, plester luka, antiseptik cair, kapas steril', 20, 5);
+
+-- =============================================================
+-- Verifikasi/checklist rekap kehadiran mingguan (per user x minggu ISO)
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS `recap_checks` (
+  `id`         INT(11)   NOT NULL AUTO_INCREMENT,
+  `user_id`    INT(11)   NOT NULL,
+  `tahun`      INT(11)   NOT NULL,
+  `minggu`     INT(11)   NOT NULL,
+  `checked_by` INT(11)   DEFAULT NULL,
+  `checked_at` DATETIME  DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_recap` (`user_id`,`tahun`,`minggu`),
+  CONSTRAINT `fk_recap_user`    FOREIGN KEY (`user_id`)    REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_recap_checker` FOREIGN KEY (`checked_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

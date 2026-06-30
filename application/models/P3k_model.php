@@ -66,10 +66,11 @@ class P3k_model extends CI_Model
     // ── HISTORY ───────────────────────────────────────────
     public function getHistory($userId = null, $startDate = null, $endDate = null, $limit = 50, $offset = 0)
     {
-        $this->db->select('w.*, u.name as petugas, u.jabatan, k.name as kit_name')
+        $this->db->select('w.*, u.name as petugas, u.jabatan, k.name as kit_name, c.name as checker_name')
                  ->from('p3k_wd w')
                  ->join('users u', 'u.id = w.user_id')
-                 ->join('p3k_kits k', 'k.id = w.kit_id');
+                 ->join('p3k_kits k', 'k.id = w.kit_id')
+                 ->join('users c', 'c.id = w.checked_by', 'left');
 
         if ($userId)    $this->db->where('w.user_id', $userId);
         if ($startDate) $this->db->where('DATE(w.created_at) >=', $startDate);
@@ -96,5 +97,22 @@ class P3k_model extends CI_Model
     {
         return $this->db->where('stock <= min_stock', NULL, FALSE)
                         ->get('p3k_kits')->result_array();
+    }
+
+    /** Toggle verifikasi 1 baris WD. Return TRUE=tercentang, FALSE=dilepas, NULL=tidak ada. */
+    public function toggleCheck($id, $checkerId)
+    {
+        $row = $this->db->where('id', $id)->get('p3k_wd')->row_array();
+        if (!$row) return null;
+
+        if ($row['checked_by']) {
+            $this->db->where('id', $id)->update('p3k_wd', ['checked_by' => null, 'checked_at' => null]);
+            return false;
+        }
+        $this->db->where('id', $id)->update('p3k_wd', [
+            'checked_by' => $checkerId,
+            'checked_at' => date('Y-m-d H:i:s'),
+        ]);
+        return true;
     }
 }

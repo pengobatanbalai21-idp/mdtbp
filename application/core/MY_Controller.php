@@ -40,6 +40,19 @@ class MY_Controller extends CI_Controller
         return array_merge(['user' => $this->user], $extra);
     }
 
+    /**
+     * Redirect kembali ke halaman asal (referer) bila masih satu situs,
+     * kalau tidak ada / beda host pakai $fallback. Mencegah open-redirect.
+     */
+    protected function backRedirect($fallback = 'dashboard')
+    {
+        $ref = $this->input->server('HTTP_REFERER');
+        if ($ref && strpos($ref, base_url()) === 0) {
+            redirect($ref);
+        }
+        redirect($fallback);
+    }
+
     protected function logActivity($action, $description = null)
     {
         if ($this->user) {

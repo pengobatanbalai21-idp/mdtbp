@@ -73,6 +73,20 @@ class P3k extends MY_Controller
         redirect('p3k');
     }
 
+    /** Verifikasi/checklist 1 WD P3K — admin/pimpinan only */
+    public function check($id)
+    {
+        $this->requireRole(['admin', 'pimpinan']);
+        $res = $this->P3k_model->toggleCheck($id, $this->user['id']);
+        if ($res === null) {
+            $this->session->set_flashdata('error', 'Data WD P3K tidak ditemukan.');
+        } else {
+            $this->logActivity('verifikasi_wd_p3k', "WD P3K id={$id} " . ($res ? 'dicentang' : 'dilepas'));
+            $this->session->set_flashdata('success', $res ? 'WD P3K terverifikasi.' : 'Verifikasi dilepas.');
+        }
+        $this->backRedirect('p3k/history');
+    }
+
     /** Riwayat WD — user lihat milik sendiri, admin/pimpinan lihat semua */
     public function history()
     {

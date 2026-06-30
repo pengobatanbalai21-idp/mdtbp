@@ -116,6 +116,7 @@ foreach ($history as $h) {
                         <th>Qty</th>
                         <th>Keperluan</th>
                         <th>Catatan</th>
+                        <th class="text-center">Verifikasi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -155,6 +156,25 @@ foreach ($history as $h) {
                         </td>
                         <td class="text-muted small text-truncate" style="max-width:150px">
                             <?= htmlspecialchars($row['notes'] ?? '-') ?>
+                        </td>
+                        <td class="text-center text-nowrap">
+                            <?php if (!empty($row['checked_by'])): ?>
+                                <span class="badge bg-success-subtle text-success rounded-pill px-2"
+                                      title="Diverifikasi <?= $row['checked_at'] ? date('d M Y H:i', strtotime($row['checked_at'])) : '' ?>">
+                                    <i class="bi bi-check2-circle me-1"></i><?= htmlspecialchars($row['checker_name'] ?? 'OK') ?>
+                                </span>
+                                <?php if ($isAdmin): ?>
+                                <form method="POST" action="<?= site_url('p3k/check/' . $row['id']) ?>" class="d-inline">
+                                    <button class="btn btn-sm btn-link text-danger p-0 ms-1 align-baseline" title="Lepas verifikasi"><i class="bi bi-x-circle"></i></button>
+                                </form>
+                                <?php endif; ?>
+                            <?php elseif ($isAdmin): ?>
+                                <form method="POST" action="<?= site_url('p3k/check/' . $row['id']) ?>" class="d-inline">
+                                    <button class="btn btn-sm btn-outline-success rounded-3" title="Verifikasi"><i class="bi bi-check2"></i></button>
+                                </form>
+                            <?php else: ?>
+                                <span class="text-muted small">—</span>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>

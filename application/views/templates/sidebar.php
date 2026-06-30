@@ -27,6 +27,11 @@
             <span>Absensi & Waktu Kerja</span>
         </a>
 
+        <a href="<?= site_url('attendance/recap') ?>" class="sidebar-link <?= (uri_string() == 'attendance/recap') ? 'active' : '' ?>">
+            <i class="bi bi-calendar3-week"></i>
+            <span>Rekap Kehadiran</span>
+        </a>
+
         <?php
         $ci = get_instance();
         $ci->load->model('Leave_model');
@@ -79,11 +84,6 @@
         <a href="<?= site_url('finance') ?>" class="sidebar-link <?= (strpos(uri_string(),'finance') !== FALSE) ? 'active' : '' ?>">
             <i class="bi bi-cash-stack"></i>
             <span>Keuangan</span>
-        </a>
-
-        <a href="<?= site_url('attendance/recap') ?>" class="sidebar-link <?= (uri_string() == 'attendance/recap') ? 'active' : '' ?>">
-            <i class="bi bi-calendar3-week"></i>
-            <span>Rekap Kehadiran</span>
         </a>
 
         <a href="<?= site_url('users') ?>" class="sidebar-link <?= (strpos(uri_string(),'users') !== FALSE) ? 'active' : '' ?>">

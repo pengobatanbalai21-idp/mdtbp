@@ -16,17 +16,21 @@ class Attendance extends MY_Controller
         $startDate = $this->input->get('start_date') ?: date('Y-m-01');
         $endDate   = $this->input->get('end_date')   ?: date('Y-m-d');
 
-        $todayAttendance = $this->Attendance_model->getTodayAttendance($this->user['id']);
-        $history         = $this->Attendance_model->getHistory($userId, $startDate, $endDate);
-        $summary         = $this->Attendance_model->getSummaryByUser($this->user['id']);
+        $history       = $this->Attendance_model->getHistory($userId, $startDate, $endDate);
+        $summary       = $this->Attendance_model->getSummaryByUser($this->user['id']);
+        $todaySessions = $this->Attendance_model->getTodaySessions($this->user['id']);
+        $openSession   = $this->Attendance_model->getOpenSession($this->user['id']);
+        $todayTotal    = $this->Attendance_model->getTodayTotalHours($this->user['id']);
 
         $data = $this->viewData([
-            'title'           => 'Absensi & Waktu Kerja',
-            'todayAttendance' => $todayAttendance,
-            'history'         => $history,
-            'summary'         => $summary,
-            'start_date'      => $startDate,
-            'end_date'        => $endDate,
+            'title'         => 'Absensi & Waktu Kerja',
+            'todaySessions' => $todaySessions,
+            'openSession'   => $openSession,
+            'todayTotal'    => $todayTotal,
+            'history'       => $history,
+            'summary'       => $summary,
+            'start_date'    => $startDate,
+            'end_date'      => $endDate,
         ]);
 
         $this->load->view('templates/header', $data);
@@ -53,14 +57,17 @@ class Attendance extends MY_Controller
         redirect('attendance');
     }
 
+    /** Rekap kehadiran — bisa diakses SEMUA role (user lihat miliknya sendiri) */
     public function recap()
     {
-        $this->requireRole(['admin', 'pimpinan']);
+        $this->requireLogin();
         $this->load->model('User_model');
 
-        $year      = (int)($this->input->get('year')    ?: date('Y'));
-        $month     = (int)($this->input->get('month')   ?: 0);
-        $userId    = $this->input->get('user_id')       ?: null;
+        $isAdmin = $this->isAdmin();
+        $year    = (int)($this->input->get('year')  ?: date('Y'));
+        $month   = (int)($this->input->get('month') ?: 0);
+        // Non admin/pimpinan dikunci ke data dirinya sendiri
+        $userId  = $isAdmin ? ($this->input->get('user_id') ?: null) : $this->user['id'];
 
         if ($month) {
             $startDate = date('Y-m-01', mktime(0, 0, 0, $month, 1, $year));
@@ -70,8 +77,9 @@ class Attendance extends MY_Controller
             $endDate   = "{$year}-12-31";
         }
 
-        $recap = $this->Attendance_model->getWeeklyRecap($userId, $startDate, $endDate);
-        $users = $this->User_model->getAll();
+        $recap    = $this->Attendance_model->getWeeklyRecap($userId, $startDate, $endDate);
+        $checkMap = $this->Attendance_model->getRecapCheckMap();
+        $users    = $isAdmin ? $this->User_model->getAll() : [];
 
         $minHours    = 21;
         $finePerHour = 150000;
@@ -82,6 +90,11 @@ class Attendance extends MY_Controller
             $row['kurang']    = max(0, $minHours - $row['total_jam']);
             $row['denda']     = $row['kurang'] * $finePerHour;
             $totalDenda      += $row['denda'];
+
+            $ck = $checkMap[$row['user_id'] . '_' . $row['tahun'] . '_' . $row['minggu']] ?? null;
+            $row['checked']      = (bool)$ck;
+            $row['checker_name'] = $ck['checker_name'] ?? null;
+            $row['checked_at']   = $ck['checked_at'] ?? null;
         }
         unset($row);
 
@@ -89,6 +102,7 @@ class Attendance extends MY_Controller
             'title'        => 'Rekap Kehadiran Mingguan',
             'recap'        => $recap,
             'users'        => $users,
+            'is_admin'     => $isAdmin,
             'year'         => $year,
             'month'        => $month,
             'user_filter'  => $userId,
@@ -103,5 +117,62 @@ class Attendance extends MY_Controller
         $this->load->view('templates/sidebar', $data);
         $this->load->view('attendance/recap', $data);
         $this->load->view('templates/footer', $data);
+    }
+
+    /** Edit waktu absensi (clock in/out + status) — admin/pimpinan only */
+    public function edit_record($id)
+    {
+        $this->requireRole(['admin', 'pimpinan']);
+
+        $rec = $this->Attendance_model->getRecordById($id);
+        if (!$rec) {
+            $this->session->set_flashdata('error', 'Data absensi tidak ditemukan.');
+            return $this->backRedirect('attendance');
+        }
+
+        $clockIn  = $this->input->post('clock_in');
+        $clockOut = $this->input->post('clock_out');
+        $status   = $this->input->post('status') ?: 'hadir';
+
+        // input datetime-local -> "Y-m-d H:i:s"
+        $clockIn  = $clockIn  ? date('Y-m-d H:i:s', strtotime($clockIn))  : null;
+        $clockOut = $clockOut ? date('Y-m-d H:i:s', strtotime($clockOut)) : null;
+
+        if ($clockIn && $clockOut && strtotime($clockOut) < strtotime($clockIn)) {
+            $this->session->set_flashdata('error', 'Clock Out tidak boleh lebih awal dari Clock In.');
+            return $this->backRedirect('attendance');
+        }
+
+        $this->Attendance_model->updateRecord($id, $clockIn, $clockOut, $status);
+        $this->logActivity('edit_absensi', "Edit absensi id={$id}");
+        $this->session->set_flashdata('success', 'Waktu absensi berhasil diperbarui.');
+        $this->backRedirect('attendance');
+    }
+
+    /** Hapus record absensi — admin/pimpinan only */
+    public function delete_record($id)
+    {
+        $this->requireRole(['admin', 'pimpinan']);
+        $this->Attendance_model->deleteRecord($id);
+        $this->logActivity('hapus_absensi', "Hapus absensi id={$id}");
+        $this->session->set_flashdata('success', 'Record absensi berhasil dihapus.');
+        $this->backRedirect('attendance');
+    }
+
+    /** Toggle verifikasi/checklist satu baris rekap mingguan — admin/pimpinan only */
+    public function check_recap()
+    {
+        $this->requireRole(['admin', 'pimpinan']);
+
+        $userId = (int)$this->input->post('user_id');
+        $tahun  = (int)$this->input->post('tahun');
+        $minggu = (int)$this->input->post('minggu');
+
+        if ($userId && $tahun && $minggu) {
+            $checked = $this->Attendance_model->toggleRecapCheck($userId, $tahun, $minggu, $this->user['id']);
+            $this->logActivity('verifikasi_rekap', "Rekap user={$userId} {$tahun}W{$minggu} " . ($checked ? 'dicentang' : 'dilepas'));
+            $this->session->set_flashdata('success', $checked ? 'Rekap diverifikasi.' : 'Verifikasi dilepas.');
+        }
+        $this->backRedirect('attendance/recap');
     }
 }

@@ -116,7 +116,7 @@
                 </form>
 
                 <!-- Demo accounts -->
-                <div class="mt-4 pt-3" style="border-top:1px solid rgba(212,160,23,.12)">
+                <!--div class="mt-4 pt-3" style="border-top:1px solid rgba(212,160,23,.12)">
                     <p class="text-center mb-2" style="font-size:.68rem;color:rgba(212,160,23,.4);text-transform:uppercase;letter-spacing:.08em;font-weight:700">
                         Akun Demo
                     </p>
@@ -125,7 +125,7 @@
                         <span class="demo-chip">pimpinan / password</span>
                         <span class="demo-chip">budi / password</span>
                     </div>
-                </div>
+				</div-->
 
             </div>
         </div>

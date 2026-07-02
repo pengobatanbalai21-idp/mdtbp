@@ -7,7 +7,7 @@
             <?php endif; ?>
         </h4>
         <p class="text-muted small mb-0">
-            <?= $is_admin ? 'Denda absensi & tagihan penjualan seluruh staf' : 'Denda absensi & tagihan penjualan milik Anda' ?>
+            <?= $is_admin ? 'Denda absensi, tagihan penjualan & WD P3K seluruh staf' : 'Denda absensi, tagihan penjualan & WD P3K milik Anda' ?>
         </p>
     </div>
 </div>
@@ -18,6 +18,15 @@
         <?php $bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des']; ?>
         <form class="row g-2 align-items-end" method="GET">
             <div class="col-md-2">
+                <label class="form-label small fw-semibold">Jenis Periode</label>
+                <select name="period_type" id="periodType" class="form-select">
+                    <option value="year"  <?= $period_type === 'year'  ? 'selected' : '' ?>>Tahunan</option>
+                    <option value="month" <?= $period_type === 'month' ? 'selected' : '' ?>>Bulanan</option>
+                    <option value="week"  <?= $period_type === 'week'  ? 'selected' : '' ?>>Mingguan</option>
+                    <option value="day"   <?= $period_type === 'day'   ? 'selected' : '' ?>>Harian</option>
+                </select>
+            </div>
+            <div class="col-md-2 period-field" data-period="year month week">
                 <label class="form-label small fw-semibold">Tahun</label>
                 <select name="year" class="form-select">
                     <?php for ($y = date('Y'); $y >= date('Y') - 3; $y--): ?>
@@ -25,24 +34,29 @@
                     <?php endfor; ?>
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold">Bulan Dari</label>
-                <select name="month_from" class="form-select">
+            <div class="col-md-2 period-field" data-period="month week">
+                <label class="form-label small fw-semibold">Bulan</label>
+                <select name="month" class="form-select">
                     <?php foreach ($bulan as $i => $b): ?>
-                    <option value="<?= $i+1 ?>" <?= $month_from == ($i+1) ? 'selected' : '' ?>><?= $b ?></option>
+                    <option value="<?= $i+1 ?>" <?= $month == ($i+1) ? 'selected' : '' ?>><?= $b ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold">Bulan Sampai</label>
-                <select name="month_to" class="form-select">
-                    <?php foreach ($bulan as $i => $b): ?>
-                    <option value="<?= $i+1 ?>" <?= $month_to == ($i+1) ? 'selected' : '' ?>><?= $b ?></option>
+            <div class="col-md-2 period-field" data-period="week">
+                <label class="form-label small fw-semibold">Minggu</label>
+                <select name="week" class="form-select">
+                    <?php $weekOptions = $period_type === 'week' && !empty($weeks_in_month) ? $weeks_in_month : range(1, 53); ?>
+                    <?php foreach ($weekOptions as $w): ?>
+                    <option value="<?= $w ?>" <?= $week == $w ? 'selected' : '' ?>>Minggu ke-<?= $w ?></option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+            <div class="col-md-2 period-field" data-period="day">
+                <label class="form-label small fw-semibold">Tanggal</label>
+                <input type="date" name="day" class="form-control" value="<?= htmlspecialchars($day) ?>">
             </div>
             <?php if ($is_admin): ?>
-            <div class="col-md-4">
+            <div class="col-md-2">
                 <label class="form-label small fw-semibold">Cari Nama</label>
                 <input type="text" name="name_search" class="form-control" placeholder="Nama staf..." value="<?= htmlspecialchars($name_search) ?>">
             </div>
@@ -51,12 +65,27 @@
                 <button class="btn btn-primary w-100 rounded-3"><i class="bi bi-search me-1"></i>Tampilkan</button>
             </div>
         </form>
+
+        <script>
+        (function () {
+            var select = document.getElementById('periodType');
+            var fields = document.querySelectorAll('.period-field');
+            function sync() {
+                fields.forEach(function (el) {
+                    var periods = el.dataset.period.split(' ');
+                    el.style.display = (periods.indexOf(select.value) !== -1) ? '' : 'none';
+                });
+            }
+            select.addEventListener('change', sync);
+            sync();
+        })();
+        </script>
     </div>
 </div>
 
 <!-- Ringkasan -->
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
+<div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-3 mb-4">
+    <div class="col">
         <div class="card border-0 shadow-sm rounded-4 h-100" style="border-left:4px solid #ef4444!important">
             <div class="card-body py-3">
                 <div class="text-muted small">Denda Belum Dibayar</div>
@@ -64,7 +93,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col">
         <div class="card border-0 shadow-sm rounded-4 h-100" style="border-left:4px solid #f59e0b!important">
             <div class="card-body py-3">
                 <div class="text-muted small">Tagihan Penjualan Belum Dibayar</div>
@@ -72,7 +101,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col">
         <div class="card border-0 shadow-sm rounded-4 h-100" style="border-left:4px solid #0d6efd!important">
             <div class="card-body py-3">
                 <div class="text-muted small">Total Paket Terjual</div>
@@ -80,11 +109,19 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col">
         <div class="card border-0 shadow-sm rounded-4 h-100" style="border-left:4px solid #0dcaf0!important">
             <div class="card-body py-3">
                 <div class="text-muted small">Total Obat Terjual</div>
                 <div class="fs-4 fw-bold text-info"><?= number_format($total_obat_qty, 0, ',', '.') ?> item</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card border-0 shadow-sm rounded-4 h-100" style="border-left:4px solid #dc3545!important">
+            <div class="card-body py-3">
+                <div class="text-muted small">Total WD P3K</div>
+                <div class="fs-4 fw-bold" style="color:#dc3545"><?= number_format($total_wd_p3k_qty, 0, ',', '.') ?> unit</div>
             </div>
         </div>
     </div>
@@ -149,6 +186,7 @@
                                 <span class="badge bg-success-subtle text-success rounded-pill px-2"
                                       title="<?= $row['note'] ? htmlspecialchars($row['note']) . ' — ' : '' ?>Dibayar <?= $row['paid_at'] ? date('d M Y H:i', strtotime($row['paid_at'])) : '' ?> oleh <?= htmlspecialchars($row['payer_name'] ?? '-') ?>">
                                     <i class="bi bi-check2-circle me-1"></i><?= htmlspecialchars($row['payer_name'] ?? 'Lunas') ?>
+                                    <?php if ($row['paid_at']): ?><span class="opacity-75">&middot; <?= date('d/m/y', strtotime($row['paid_at'])) ?></span><?php endif; ?>
                                 </span>
                                 <?php if ($is_admin): ?>
                                 <form method="POST" action="<?= site_url('tagihan/pay_fine') ?>" class="d-inline">
@@ -268,6 +306,7 @@
                                 <span class="badge bg-success-subtle text-success rounded-pill px-2"
                                       title="<?= $s['payment_note'] ? htmlspecialchars($s['payment_note']) . ' — ' : '' ?>Dibayar <?= $s['paid_at'] ? date('d M Y H:i', strtotime($s['paid_at'])) : '' ?> oleh <?= htmlspecialchars($s['payer_name'] ?? '-') ?>">
                                     <i class="bi bi-check2-circle me-1"></i><?= htmlspecialchars($s['payer_name'] ?? 'Lunas') ?>
+                                    <?php if ($s['paid_at']): ?><span class="opacity-75">&middot; <?= date('d/m/y', strtotime($s['paid_at'])) ?></span><?php endif; ?>
                                 </span>
                                 <?php if ($is_admin): ?>
                                 <form method="POST" action="<?= site_url('tagihan/pay_sale/' . $s['id']) ?>" class="d-inline">
@@ -306,6 +345,114 @@
                 <?php endforeach; ?>
                 <li class="page-item <?= $_spg >= $_spages ? 'disabled' : '' ?>">
                     <a class="page-link rounded-3" href="?<?= http_build_query(array_merge($_GET, ['page_sales' => $_spg + 1])) ?>"><i class="bi bi-chevron-right"></i></a>
+                </li>
+            </ul>
+        </div>
+        <?php endif; ?>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- ── Tagihan WD P3K ── -->
+<div class="d-flex align-items-center gap-2 mb-2 mt-2">
+    <i class="bi bi-heart-pulse text-info"></i>
+    <h6 class="fw-bold mb-0">Tagihan WD P3K</h6>
+    <span class="text-muted small">(<?= number_format($total_wd_p3k_qty, 0, ',', '.') ?> unit diambil periode ini)</span>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-0">
+        <?php
+        $_ppg    = max(1, (int)($_GET['page_p3k'] ?? 1));
+        $_ppp    = 5;
+        $_pall   = array_values($wd_p3k);
+        $_ptot   = count($_pall);
+        $_ppages = max(1, (int)ceil($_ptot / $_ppp));
+        $_ppg    = min($_ppg, $_ppages);
+        $_pfrom  = ($_ppg - 1) * $_ppp;
+        $_pitems = array_slice($_pall, $_pfrom, $_ppp);
+        ?>
+        <?php if (empty($_pall)): ?>
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-heart-pulse fs-1 d-block mb-2"></i>
+            <p class="mb-0">Tidak ada WD P3K pada periode ini.</p>
+        </div>
+        <?php else: ?>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Tanggal</th>
+                        <?php if ($is_admin): ?><th>Petugas</th><?php endif; ?>
+                        <th>Jenis Kit</th>
+                        <th class="text-center">Qty</th>
+                        <th>Keperluan</th>
+                        <th class="text-center pe-4">Checklist</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($_pitems as $row): ?>
+                    <tr>
+                        <td class="ps-4">
+                            <div><?= date('d M Y', strtotime($row['created_at'])) ?></div>
+                            <small class="text-muted"><?= date('H:i', strtotime($row['created_at'])) ?></small>
+                        </td>
+                        <?php if ($is_admin): ?>
+                        <td>
+                            <div class="fw-semibold"><?= htmlspecialchars($row['petugas']) ?></div>
+                            <small class="text-muted"><?= str_replace('_',' ',ucwords($row['jabatan'],'_')) ?></small>
+                        </td>
+                        <?php endif; ?>
+                        <td>
+                            <span class="badge bg-danger-subtle text-danger rounded-pill px-3 py-1">
+                                <i class="bi bi-box-fill me-1"></i><?= htmlspecialchars($row['kit_name']) ?>
+                            </span>
+                        </td>
+                        <td class="text-center">x<?= $row['quantity'] ?></td>
+                        <td class="text-truncate" style="max-width:180px"><?= htmlspecialchars($row['purpose'] ?: '-') ?></td>
+                        <td class="text-center pe-4 text-nowrap">
+                            <?php if (!empty($row['checked_by'])): ?>
+                                <span class="badge bg-success-subtle text-success rounded-pill px-2"
+                                      title="Diverifikasi <?= $row['checked_at'] ? date('d M Y H:i', strtotime($row['checked_at'])) : '' ?>">
+                                    <i class="bi bi-check2-circle me-1"></i><?= htmlspecialchars($row['checker_name'] ?? 'OK') ?>
+                                    <?php if ($row['checked_at']): ?><span class="opacity-75">&middot; <?= date('d/m/y', strtotime($row['checked_at'])) ?></span><?php endif; ?>
+                                </span>
+                                <?php if ($is_admin): ?>
+                                <form method="POST" action="<?= site_url('p3k/check/' . $row['id']) ?>" class="d-inline">
+                                    <button class="btn btn-sm btn-link text-danger p-0 ms-1 align-baseline" title="Lepas verifikasi"><i class="bi bi-x-circle"></i></button>
+                                </form>
+                                <?php endif; ?>
+                            <?php elseif ($is_admin): ?>
+                                <form method="POST" action="<?= site_url('p3k/check/' . $row['id']) ?>" class="d-inline">
+                                    <button class="btn btn-sm btn-outline-success rounded-3" title="Verifikasi"><i class="bi bi-check2"></i></button>
+                                </form>
+                            <?php else: ?>
+                                <span class="badge bg-danger-subtle text-danger rounded-pill px-2">Belum Dicek</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php if ($_ppages > 1): ?>
+        <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+            <small class="text-muted">Menampilkan <?= $_pfrom + 1 ?>–<?= min($_pfrom + $_ppp, $_ptot) ?> dari <?= $_ptot ?> data</small>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item <?= $_ppg <= 1 ? 'disabled' : '' ?>">
+                    <a class="page-link rounded-3" href="?<?= http_build_query(array_merge($_GET, ['page_p3k' => $_ppg - 1])) ?>"><i class="bi bi-chevron-left"></i></a>
+                </li>
+                <?php
+                $_pshow = $_ppages <= 7 ? range(1, $_ppages) : array_unique(array_filter([1, 2, $_ppg - 1, $_ppg, $_ppg + 1, $_ppages - 1, $_ppages], function($p) use ($_ppages) { return $p >= 1 && $p <= $_ppages; }));
+                sort($_pshow); $_pprev = 0;
+                foreach ($_pshow as $p):
+                    if ($_pprev && $p - $_pprev > 1): ?><li class="page-item disabled"><span class="page-link">…</span></li><?php endif; $_pprev = $p; ?>
+                <li class="page-item <?= $p === $_ppg ? 'active' : '' ?>">
+                    <a class="page-link rounded-3" href="?<?= http_build_query(array_merge($_GET, ['page_p3k' => $p])) ?>"><?= $p ?></a>
+                </li>
+                <?php endforeach; ?>
+                <li class="page-item <?= $_ppg >= $_ppages ? 'disabled' : '' ?>">
+                    <a class="page-link rounded-3" href="?<?= http_build_query(array_merge($_GET, ['page_p3k' => $_ppg + 1])) ?>"><i class="bi bi-chevron-right"></i></a>
                 </li>
             </ul>
         </div>

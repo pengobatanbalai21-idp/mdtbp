@@ -14,6 +14,7 @@ class Tagihan extends MY_Controller
         $this->requireLogin();
         $this->load->model('Attendance_model');
         $this->load->model('Medicine_model');
+        $this->load->model('P3k_model');
     }
 
     public function index()
@@ -23,15 +24,51 @@ class Tagihan extends MY_Controller
         $isAdmin = $this->isAdmin();
         $year    = (int)($this->input->get('year') ?: date('Y'));
 
-        $monthFrom = (int)($this->input->get('month_from') ?: 1);
-        $monthTo   = (int)($this->input->get('month_to')   ?: 12);
-        $monthFrom = min(12, max(1, $monthFrom));
-        $monthTo   = min(12, max(1, $monthTo));
-        if ($monthFrom > $monthTo) {
-            [$monthFrom, $monthTo] = [$monthTo, $monthFrom];
+        // Jenis periode: tahunan (default), bulanan, mingguan, atau harian
+        $periodType = $this->input->get('period_type') ?: 'year';
+        if (!in_array($periodType, ['year', 'month', 'week', 'day'], true)) {
+            $periodType = 'year';
         }
-        $startDate = date('Y-m-01', mktime(0, 0, 0, $monthFrom, 1, $year));
-        $endDate   = date('Y-m-t',  mktime(0, 0, 0, $monthTo, 1, $year));
+
+        $month = min(12, max(1, (int)($this->input->get('month') ?: date('n'))));
+        $week  = min(53, max(1, (int)($this->input->get('week')  ?: date('W'))));
+        $day   = $this->input->get('day') ?: date('Y-m-d');
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) {
+            $day = date('Y-m-d');
+        }
+
+        // Daftar minggu ISO yang bersinggungan dengan bulan terpilih (untuk mempersempit pilihan Minggu)
+        $weeksInMonth = [];
+        $cursor = new DateTime(sprintf('%04d-%02d-01', $year, $month));
+        $lastDay = new DateTime($cursor->format('Y-m-t'));
+        while ($cursor <= $lastDay) {
+            $weeksInMonth[(int)$cursor->format('W')] = true;
+            $cursor->modify('+1 day');
+        }
+        $weeksInMonth = array_keys($weeksInMonth);
+        sort($weeksInMonth);
+
+        switch ($periodType) {
+            case 'month':
+                $startDate = date('Y-m-01', mktime(0, 0, 0, $month, 1, $year));
+                $endDate   = date('Y-m-t',  mktime(0, 0, 0, $month, 1, $year));
+                break;
+            case 'week':
+                $monday = new DateTime();
+                $monday->setISODate($year, $week);
+                $sunday = clone $monday;
+                $sunday->modify('+6 days');
+                $startDate = $monday->format('Y-m-d');
+                $endDate   = $sunday->format('Y-m-d');
+                break;
+            case 'day':
+                $startDate = $day;
+                $endDate   = $day;
+                break;
+            default: // year
+                $startDate = "{$year}-01-01";
+                $endDate   = "{$year}-12-31";
+        }
 
         $userId     = $isAdmin ? ($this->input->get('user_id') ?: null) : $this->user['id'];
         $nameSearch = $isAdmin ? trim($this->input->get('name_search') ?: '') : '';
@@ -100,17 +137,32 @@ class Tagihan extends MY_Controller
         }
         unset($s);
 
+        // ── Tagihan WD P3K ──
+        $wdP3k = $this->P3k_model->getHistory($userId, $startDate, $endDate, 100000, 0);
+
+        if ($nameSearch !== '') {
+            $wdP3k = array_values(array_filter($wdP3k, function ($r) use ($nameSearch) {
+                return stripos($r['petugas'], $nameSearch) !== false;
+            }));
+        }
+
+        $totalWdP3kQty = array_sum(array_column($wdP3k, 'quantity'));
+
         $users = $isAdmin ? $this->User_model->getAll() : [];
 
         $data = $this->viewData([
             'title'        => 'Rekap Tagihan',
             'denda'        => $denda,
             'sales'        => $sales,
+            'wd_p3k'       => $wdP3k,
             'users'        => $users,
             'is_admin'     => $isAdmin,
             'year'         => $year,
-            'month_from'   => $monthFrom,
-            'month_to'     => $monthTo,
+            'period_type'  => $periodType,
+            'month'        => $month,
+            'week'         => $week,
+            'day'          => $day,
+            'weeks_in_month' => $weeksInMonth,
             'name_search'  => $nameSearch,
             'user_filter'  => $userId,
             'min_hours'    => $minHours,
@@ -119,6 +171,7 @@ class Tagihan extends MY_Controller
             'total_sales_belum_bayar' => $totalSalesBelumBayar,
             'total_paket_qty'         => $totalPaketQty,
             'total_obat_qty'          => $totalObatQty,
+            'total_wd_p3k_qty'        => $totalWdP3kQty,
         ]);
 
         $this->load->view('templates/header', $data);

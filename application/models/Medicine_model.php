@@ -223,4 +223,46 @@ class Medicine_model extends CI_Model
         ]);
         return true;
     }
+
+    // ── Tagihan penjualan (status lunas) ─────────────────────
+    /** Semua transaksi penjualan untuk rekap tagihan, opsional per user, join nama pembayar. */
+    public function getSalesForBilling($userId = null)
+    {
+        $this->db->select("s.*, u.name AS petugas, u.jabatan, p.name AS payer_name,
+                            CASE WHEN s.sale_type = 'package' THEN pk.name ELSE m.name END AS item_name", false)
+                 ->from('sales s')
+                 ->join('users u', 'u.id = s.user_id')
+                 ->join('users p', 'p.id = s.paid_by', 'left')
+                 ->join('packages pk', "pk.id = s.reference_id AND s.sale_type = 'package'", 'left')
+                 ->join('medicines m', "m.id = s.reference_id AND s.sale_type = 'item'", 'left');
+
+        if ($userId) {
+            $this->db->where('s.user_id', $userId);
+        }
+        return $this->db->order_by('s.created_at', 'DESC')->get()->result_array();
+    }
+
+    /** Tandai/batalkan lunas 1 transaksi penjualan dengan keterangan. TRUE=lunas, FALSE=dibatalkan, NULL=tidak ada. */
+    public function toggleSalePaid($id, $payerId, $note = null)
+    {
+        $row = $this->db->where('id', $id)->get('sales')->row_array();
+        if (!$row) return null;
+
+        if ($row['is_paid']) {
+            $this->db->where('id', $id)->update('sales', [
+                'is_paid'      => 0,
+                'paid_at'      => null,
+                'paid_by'      => null,
+                'payment_note' => null,
+            ]);
+            return false;
+        }
+        $this->db->where('id', $id)->update('sales', [
+            'is_paid'      => 1,
+            'paid_at'      => date('Y-m-d H:i:s'),
+            'paid_by'      => $payerId,
+            'payment_note' => $note,
+        ]);
+        return true;
+    }
 }

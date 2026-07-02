@@ -226,6 +226,52 @@ class Attendance_model extends CI_Model
         return $result;
     }
 
+    // ── Status lunas denda absensi mingguan ──────────────────
+    /** Map "user_id_tahun_minggu" => row denda yang sudah dibayar (join nama pembayar) */
+    public function getFinePaymentMap()
+    {
+        $rows = $this->db->select('wfp.user_id, wfp.year, wfp.week, wfp.is_paid, wfp.paid_at, wfp.note, p.name AS payer_name')
+                         ->from('weekly_fine_payments wfp')
+                         ->join('users p', 'p.id = wfp.paid_by', 'left')
+                         ->where('wfp.is_paid', 1)
+                         ->get()->result_array();
+        $map = [];
+        foreach ($rows as $r) {
+            $map[$r['user_id'] . '_' . $r['year'] . '_' . $r['week']] = $r;
+        }
+        return $map;
+    }
+
+    public function markFinePaid($userId, $year, $week, $payerId, $note = null)
+    {
+        $existing = $this->db->where(['user_id' => $userId, 'year' => $year, 'week' => $week])
+                             ->get('weekly_fine_payments')->row_array();
+        $data = [
+            'is_paid' => 1,
+            'paid_at' => date('Y-m-d H:i:s'),
+            'paid_by' => $payerId,
+            'note'    => $note,
+        ];
+        if ($existing) {
+            return $this->db->where('id', $existing['id'])->update('weekly_fine_payments', $data);
+        }
+        $data['user_id'] = $userId;
+        $data['year']    = $year;
+        $data['week']    = $week;
+        return $this->db->insert('weekly_fine_payments', $data);
+    }
+
+    public function unmarkFinePaid($userId, $year, $week)
+    {
+        return $this->db->where(['user_id' => $userId, 'year' => $year, 'week' => $week])
+                        ->update('weekly_fine_payments', [
+                            'is_paid' => 0,
+                            'paid_at' => null,
+                            'paid_by' => null,
+                            'note'    => null,
+                        ]);
+    }
+
     public function getSummaryByUser($userId, $month = null, $year = null)
     {
         $m = $month ?: date('m');

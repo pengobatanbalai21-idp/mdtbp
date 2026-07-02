@@ -32,6 +32,11 @@
             <span>Rekap Kehadiran</span>
         </a>
 
+        <a href="<?= site_url('tagihan') ?>" class="sidebar-link <?= (strpos(uri_string(),'tagihan') !== FALSE) ? 'active' : '' ?>">
+            <i class="bi bi-receipt-cutoff"></i>
+            <span>Rekap Tagihan</span>
+        </a>
+
         <?php
         $ci = get_instance();
         $ci->load->model('Leave_model');

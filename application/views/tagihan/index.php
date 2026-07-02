@@ -148,7 +148,7 @@
                             <?php if ($row['paid']): ?>
                                 <span class="badge bg-success-subtle text-success rounded-pill px-2"
                                       title="<?= $row['note'] ? htmlspecialchars($row['note']) . ' — ' : '' ?>Dibayar <?= $row['paid_at'] ? date('d M Y H:i', strtotime($row['paid_at'])) : '' ?> oleh <?= htmlspecialchars($row['payer_name'] ?? '-') ?>">
-                                    <i class="bi bi-check2-circle me-1"></i>Lunas
+                                    <i class="bi bi-check2-circle me-1"></i><?= htmlspecialchars($row['payer_name'] ?? 'Lunas') ?>
                                 </span>
                                 <?php if ($is_admin): ?>
                                 <form method="POST" action="<?= site_url('tagihan/pay_fine') ?>" class="d-inline">
@@ -267,7 +267,7 @@
                             <?php if ($s['is_paid']): ?>
                                 <span class="badge bg-success-subtle text-success rounded-pill px-2"
                                       title="<?= $s['payment_note'] ? htmlspecialchars($s['payment_note']) . ' — ' : '' ?>Dibayar <?= $s['paid_at'] ? date('d M Y H:i', strtotime($s['paid_at'])) : '' ?> oleh <?= htmlspecialchars($s['payer_name'] ?? '-') ?>">
-                                    <i class="bi bi-check2-circle me-1"></i>Lunas
+                                    <i class="bi bi-check2-circle me-1"></i><?= htmlspecialchars($s['payer_name'] ?? 'Lunas') ?>
                                 </span>
                                 <?php if ($is_admin): ?>
                                 <form method="POST" action="<?= site_url('tagihan/pay_sale/' . $s['id']) ?>" class="d-inline">
